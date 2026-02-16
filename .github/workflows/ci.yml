@@ -1,0 +1,127 @@
+name: CI/CD Pipeline - Docker & Cypress
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: cypress/package-lock.json
+
+      - name: Pull Docker images
+        run: |
+          echo "Pulling Docker images..."
+          docker pull postgres:16-alpine
+          docker pull node:18-alpine
+        continue-on-error: true
+
+      - name: Start services with Docker Compose
+        run: |
+          docker-compose up -d --build
+          echo "Waiting for services to be healthy..."
+          sleep 10
+
+      - name: Check services health
+        run: |
+          echo "Checking backend health..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/api/health > /dev/null 2>&1; then
+              echo "Backend is healthy ✓"
+              break
+            fi
+            echo "Attempt $i/30 - waiting for backend..."
+            sleep 2
+          done
+
+      - name: Install Cypress dependencies
+        working-directory: ./cypress
+        run: npm install
+
+      - name: Run Cypress tests
+        working-directory: ./cypress
+        run: npm run cy:run
+        continue-on-error: false
+
+      - name: Upload Cypress artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/cypress/screenshots/
+          if-no-files-found: ignore
+
+      - name: Upload Cypress videos on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-videos
+          path: cypress/cypress/videos/
+          if-no-files-found: ignore
+
+      - name: Show Docker logs on failure
+        if: failure()
+        run: |
+          echo "=== Frontend Logs ==="
+          docker logs stockguard-front || true
+          echo "=== Backend Logs ==="
+          docker logs stockguard-back || true
+          echo "=== Database Logs ==="
+          docker logs stockguard-db || true
+
+      - name: Cleanup - Stop and remove containers
+        if: always()
+        run: |
+          docker-compose down -v
+          echo "Containers cleaned up ✓"
+
+  build-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: |
+            front/package-lock.json
+            cypress/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./front
+        run: npm install
+
+      - name: Build frontend
+        working-directory: ./front
+        run: npm run build
+        continue-on-error: true
+
+      - name: Install Cypress dependencies
+        working-directory: ./cypress
+        run: npm install
+
+      - name: Lint Cypress tests
+        working-directory: ./cypress
+        run: npx tsc --noEmit
+        continue-on-error: true
