@@ -14,42 +14,49 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # -----------------------------
+      # Setup Node (Cypress)
+      # -----------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
           cache: "npm"
           cache-dependency-path: cypress/package-lock.json
 
-      - name: Pull Docker images
+      # -----------------------------
+      # Start Docker services
+      # -----------------------------
+      - name: Pull Docker images (optional)
         run: |
-          echo "Pulling Docker images..."
-          docker pull postgres:16-alpine
-          docker pull node:18-alpine
-        continue-on-error: true
+          docker pull postgres:16-alpine || true
+          docker pull node:20-alpine || true
 
       - name: Start Docker services
-        run: docker compose up -d --build
+        run: docker compose -f docker-compose.yml up -d --build
 
-      - name: Wait for services to be healthy
-        run: |
-          echo "Waiting for services..."
-          sleep 10
-
+      # -----------------------------
+      # Wait for backend
+      # -----------------------------
       - name: Check backend health
         run: |
           echo "Checking backend health..."
           for i in {1..30}; do
-            if curl -f http://localhost:8080/api/health > /dev/null 2>&1; then
+            if curl -f http://localhost:8080/api/health; then
               echo "Backend is healthy ✓"
               exit 0
             fi
-            echo "Attempt $i/30 - waiting for backend..."
+            echo "Attempt $i/30 - waiting..."
             sleep 2
           done
-          echo "Backend did not become healthy in time"
+
+          echo "Backend did not become healthy"
+          docker compose logs
           exit 1
 
+      # -----------------------------
+      # Run Cypress
+      # -----------------------------
       - name: Install Cypress dependencies
         working-directory: ./cypress
         run: npm ci
@@ -58,7 +65,10 @@ jobs:
         working-directory: ./cypress
         run: npm run cy:run
 
-      - name: Upload Cypress screenshots (on failure)
+      # -----------------------------
+      # Artifacts (only on failure)
+      # -----------------------------
+      - name: Upload Cypress screenshots
         if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -66,7 +76,7 @@ jobs:
           path: cypress/cypress/screenshots/
           if-no-files-found: ignore
 
-      - name: Upload Cypress videos (on failure)
+      - name: Upload Cypress videos
         if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -74,7 +84,7 @@ jobs:
           path: cypress/cypress/videos/
           if-no-files-found: ignore
 
-      - name: Show Docker logs (on failure)
+      - name: Show Docker logs
         if: failure()
         run: |
           echo "=== Frontend Logs ==="
@@ -84,9 +94,16 @@ jobs:
           echo "=== Database Logs ==="
           docker logs stockguard-db || true
 
-      - name: Cleanup
+      # -----------------------------
+      # Cleanup (always runs)
+      # -----------------------------
+      - name: Cleanup containers
         if: always()
         run: docker compose down -v
+
+  # ======================================================
+  # BUILD CHECK JOB
+  # ======================================================
 
   build-check:
     runs-on: ubuntu-latest
@@ -95,12 +112,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # -----------------------------
+      # Setup Node (Front + Cypress)
+      # -----------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
+          cache-dependency-path: |
+            front/package-lock.json
+            cypress/package-lock.json
 
+      # -----------------------------
+      # Frontend build
+      # -----------------------------
       - name: Install frontend dependencies
         working-directory: ./front
         run: npm ci
@@ -109,10 +135,13 @@ jobs:
         working-directory: ./front
         run: npm run build
 
+      # -----------------------------
+      # Cypress Type Check
+      # -----------------------------
       - name: Install Cypress dependencies
         working-directory: ./cypress
         run: npm ci
 
       - name: Type check Cypress tests
         working-directory: ./cypress
-        run: npx tsc --noEmit
+        run: npx tsc -p tsconfig.json --noEmit
