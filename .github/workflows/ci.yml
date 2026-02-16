@@ -10,9 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      docker:
-        image: docker:dind
         options: --privileged
 
     steps:
@@ -32,10 +29,10 @@ jobs:
           docker pull postgres:16-alpine
           docker pull node:18-alpine
         continue-on-error: true
-
-      - name: Start services with Docker Compose
-        run: |
-          docker-compose up -d --build
+          uses: docker/compose-action@v4
+          with:
+            compose-file: docker-compose.yml
+            args: up -d --build
           echo "Waiting for services to be healthy..."
           sleep 10
 
@@ -85,10 +82,12 @@ jobs:
           docker logs stockguard-back || true
           echo "=== Database Logs ==="
           docker logs stockguard-db || true
-
-      - name: Cleanup - Stop and remove containers
-        if: always()
-        run: |
+        - name: Cleanup - Stop and remove containers
+          if: always()
+          uses: docker/compose-action@v4
+          with:
+            compose-file: docker-compose.yml
+            args: down -v
           docker-compose down -v
           echo "Containers cleaned up ✓"
 
