@@ -198,7 +198,6 @@ docker-compose up --build
 
 **Próximos Passos:**
 
-- [ ] Integração com GitHub Actions
-- [ ] Autenticação JWT
+- [x] Integração com GitHub Actions
 - [ ] Mais testes E2E
 - [ ] API Documentation com Swagger
