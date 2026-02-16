@@ -1,4 +1,4 @@
-import Navbar from "../Navbar";
+import Navbar from "./Navbar";
 
 export default class Inventory extends Navbar {
   title = () => cy.get("[data-test-id='page-title-inventory']");

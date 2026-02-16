@@ -29,7 +29,7 @@ jobs:
         continue-on-error: true
 
       - name: Start Docker services
-        uses: docker/compose-action@v4
+        run: docker compose up -d --build
         with:
           compose-file: docker-compose.yml
           args: up -d --build
@@ -87,11 +87,9 @@ jobs:
           echo "=== Database Logs ==="
           docker logs stockguard-db || true
 
-      - name: Cleanup - Stop and remove containers
+      - name: Cleanup
         if: always()
-        run: |
-          docker compose down -v
-          echo "Containers cleaned up ✓"
+        run: docker compose down -v
 
   build-check:
     runs-on: ubuntu-latest
