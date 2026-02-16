@@ -1,0 +1,68 @@
+services:
+  # Frontend - React + Vite
+  front:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: stockguard-front
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    volumes:
+      - ./front:/app
+      - /app/node_modules
+    depends_on:
+      - back
+    networks:
+      - stockguard-network
+    command: npm run dev
+
+  # Backend - Go
+  back:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    container_name: stockguard-back
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=stockguard_user
+      - DB_PASSWORD=stockguard_pass
+      - DB_NAME=stockguard_db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - stockguard-network
+    command: ./app
+
+  # Database - PostgreSQL
+  db:
+    image: postgres:16-alpine
+    container_name: stockguard-db
+    environment:
+      - POSTGRES_USER=stockguard_user
+      - POSTGRES_PASSWORD=stockguard_pass
+      - POSTGRES_DB=stockguard_db
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - stockguard-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockguard_user -d stockguard_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stockguard-network
+
+networks:
+  stockguard-network:
+    driver: bridge
+
+volumes:
+  stockguard-db-data:

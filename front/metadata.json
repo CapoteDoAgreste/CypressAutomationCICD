@@ -1,0 +1,4 @@
+{
+  "name": "StockGuard RBAC",
+  "description": "A comprehensive stock management system with Role-Based Access Control (RBAC). Features granular permission management, user groups, and an AI-powered inventory assistant. Includes full Backend (Go) and Docker templates."
+}
