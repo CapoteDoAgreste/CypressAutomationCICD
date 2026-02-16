@@ -10,8 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-        options: --privileged
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,35 +27,41 @@ jobs:
           docker pull postgres:16-alpine
           docker pull node:18-alpine
         continue-on-error: true
-          uses: docker/compose-action@v4
-          with:
-            compose-file: docker-compose.yml
-            args: up -d --build
-          echo "Waiting for services to be healthy..."
+
+      - name: Start Docker services
+        uses: docker/compose-action@v4
+        with:
+          compose-file: docker-compose.yml
+          args: up -d --build
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for services..."
           sleep 10
 
-      - name: Check services health
+      - name: Check backend health
         run: |
           echo "Checking backend health..."
           for i in {1..30}; do
             if curl -f http://localhost:8080/api/health > /dev/null 2>&1; then
               echo "Backend is healthy ✓"
-              break
+              exit 0
             fi
             echo "Attempt $i/30 - waiting for backend..."
             sleep 2
           done
+          echo "Backend did not become healthy in time"
+          exit 1
 
       - name: Install Cypress dependencies
         working-directory: ./cypress
-        run: npm install
+        run: npm ci
 
       - name: Run Cypress tests
         working-directory: ./cypress
         run: npm run cy:run
-        continue-on-error: false
 
-      - name: Upload Cypress artifacts on failure
+      - name: Upload Cypress screenshots (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -65,7 +69,7 @@ jobs:
           path: cypress/cypress/screenshots/
           if-no-files-found: ignore
 
-      - name: Upload Cypress videos on failure
+      - name: Upload Cypress videos (on failure)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -73,7 +77,7 @@ jobs:
           path: cypress/cypress/videos/
           if-no-files-found: ignore
 
-      - name: Show Docker logs on failure
+      - name: Show Docker logs (on failure)
         if: failure()
         run: |
           echo "=== Frontend Logs ==="
@@ -82,13 +86,11 @@ jobs:
           docker logs stockguard-back || true
           echo "=== Database Logs ==="
           docker logs stockguard-db || true
-        - name: Cleanup - Stop and remove containers
-          if: always()
-          uses: docker/compose-action@v4
-          with:
-            compose-file: docker-compose.yml
-            args: down -v
-          docker-compose down -v
+
+      - name: Cleanup - Stop and remove containers
+        if: always()
+        run: |
+          docker compose down -v
           echo "Containers cleaned up ✓"
 
   build-check:
@@ -109,18 +111,16 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: ./front
-        run: npm install
+        run: npm ci
 
       - name: Build frontend
         working-directory: ./front
         run: npm run build
-        continue-on-error: true
 
       - name: Install Cypress dependencies
         working-directory: ./cypress
-        run: npm install
+        run: npm ci
 
-      - name: Lint Cypress tests
+      - name: Type check Cypress tests
         working-directory: ./cypress
         run: npx tsc --noEmit
-        continue-on-error: true
