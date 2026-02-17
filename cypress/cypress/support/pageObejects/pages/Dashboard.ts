@@ -4,6 +4,9 @@ export default class Dashboard extends Navbar {
   title = () => cy.get("[data-test-id='page-title-dashboard']");
   subtitle = () => cy.get("[data-test-id='page-subtitle-dashboard']");
 
+  username = () => cy.get("[data-test-id='current-user']");
+  userRole = () => cy.get("[data-test-id='current-user-role']");
+
   totalProductsIndicator = () =>
     cy.get("[data-test-id='indicator-total-products']");
   totalValueIndicator = () => cy.get("[data-test-id='indicator-total-value']");
@@ -33,4 +36,5 @@ export default class Dashboard extends Navbar {
   lowStockAlertTitle = () => cy.get("[data-test-id='low-stock-alert-title']");
   lowStockItems = (productId: string) =>
     cy.get(`[data-test-id='low-stock-item-${productId}']`);
+  logoutButton = () => cy.get("[data-test-id='btn-logout']");
 }
