@@ -1,4 +1,4 @@
-import Logins from "../../support/pageFlows/Logins";
+import Logins from "../../support/pageFlows/MainMenu/Logins";
 
 const flows = new Logins();
 

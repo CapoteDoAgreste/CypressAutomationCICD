@@ -1,6 +1,6 @@
-import ApiHelper from "../apiHelpers/ApiHelper";
-import Dashboard from "../pageObejects/pages/Dashboard";
-import MainMenu from "../pageObejects/pages/MainMenu";
+import ApiHelper from "../../apiHelpers/ApiHelper";
+import Dashboard from "../../pageObejects/pages/Dashboard";
+import MainMenu from "../../pageObejects/pages/MainMenu";
 
 export default class Logins {
   mainMenu = new MainMenu();

@@ -1,8 +1,6 @@
 export default class Navbar {
-  navbar = {
-    dashboard: () => cy.get("[data-test-id='nav-dashboard']"),
-    inventory: () => cy.get("[data-test-id='nav-stock']"),
-    users: () => cy.get("[data-test-id='nav-users']"),
-    groups: () => cy.get("[data-test-id='nav-groups']"),
-  };
+  dashboardLink = () => cy.get("[data-test-id='nav-dashboard']");
+  inventoryLink = () => cy.get("[data-test-id='nav-stock']");
+  usersLink = () => cy.get("[data-test-id='nav-users']");
+  groupsLink = () => cy.get("[data-test-id='nav-groups']");
 }
