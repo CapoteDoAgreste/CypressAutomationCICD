@@ -3,6 +3,7 @@
 ## 📋 Descrição
 
 Projeto de exemplo de implementação de **CI/CD** através de **GitHub Actions**, com foco em testes automatizados **E2E** (end-to-end) de front-end e back-end, em um sistema **CRUD de Estoque** com **sistema de permissões** integrado.
+O sistema de estoque foi feito com Google Studio, tendo minha autoria somente nos testes automatizados.
 
 ### Arquitetura Moderna
 
